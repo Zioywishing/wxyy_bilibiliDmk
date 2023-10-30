@@ -1,0 +1,17 @@
+{
+    "schema_version": "v1",
+    "name_for_human": "b站弹幕评论分析",
+    "name_for_model": "bilibili_analysis",
+    "description_for_human": "帮助用户分析b站弹幕评论，可以分析弹幕评论的情感倾向、词频、词云、关键词、热度等",
+    "description_for_model": "帮助用户来分析b站弹幕评论，可以分析弹幕评论的情感倾向、词频、词云、关键词、热度等",
+    "auth": {
+        "type": "none"
+    },
+    "api":{
+        "type": "openapi",
+        "url": "http://127.0.0.1:8081/.well-known/openapi.yaml"
+    },
+    "logo_url": "http://127.0.0.1:8081/logo.png",
+    "contact_email": "zjh3628@qq.com",
+    "legal_info_url": "http://www.example.com/legal"
+}

@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+    title: bilibili弹幕分析
+    description: 本项目是一个基于bilibili弹幕的分析项目，通过对弹幕的分析，可以得到弹幕中的关键词，以及弹幕的分析结果。
+    version: "v1"
+servers:
+    - url: http://127.0.0.1:8081
+paths:
+    /test:
+        post:
+            operationId: test
+            summary: 测试能否接受url链接
+            responses:
+                "200":
+                    description: url链接接受成功
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/test"
+
+components:
+    schemas:
+        test:
+            type: object
+            required: [url]
+            properties:
+                url:
+                    type: String
+                    description: url链接
