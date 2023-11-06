@@ -6,24 +6,37 @@ info:
 servers:
     - url: http://127.0.0.1:8081
 paths:
-    /test:
+   /test:
         post:
             operationId: test
-            summary: 测试能否接受url链接
+            summary: 测试能否接受bilibili_url链接
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/test"
             responses:
                 "200":
-                    description: url链接接受成功
+                    description: bilibili_url链接接受成功
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/test"
+                                $ref: "#/components/schemas/messageResponse"
 
 components:
     schemas:
+        messageResponse:
+            type: object
+            required: [message]
+            properties:
+                message:
+                    type: string
+                    description: 回复信息
         test:
             type: object
             required: [url]
             properties:
                 url:
                     type: String
-                    description: url链接
+                    description: bilibili_url链接
