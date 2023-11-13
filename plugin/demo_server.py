@@ -6,18 +6,73 @@ import jieba
 from collections import Counter
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
+from getdm import Crawler_Bilibili_Danmu as cbd
 import json
 import random
 import requests
 import re
+import sqlite3
+import os
+from random import randint
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "https://yiyan.baidu.com"}})
 
+db_path = './database.db'
+
 wordbook = []
+header = []
+
+# 防止每次爬取都要读入stopwords
+stop_words = set()
+
+with open('stopwords.txt', encoding='utf-8') as f:
+    con = f.readlines()
+    for i in con:
+        i = i.replace("\n", "")  # 去掉读取每一行数据的\n
+        stop_words.add(i)
+
+
 def make_json_response(data, status_code=200):
     response = make_response(json.dumps(data), status_code)
     response.headers["Content-Type"] = "application/json"
     return response
+
+class DB_Operation:
+    def __init__(self) -> None:
+        self.conn = sqlite3.connect(db_path)
+        self.c = self.conn.cursor()
+
+    def insert(self,bv,json) ->None:
+        sql_str = f"INSERT INTO BV2JSON (BV,JSON) \
+            VALUES ('{bv}','{json}')"
+        self.c.execute(sql_str)
+        self.conn.commit()
+
+    def select(self,bv) ->str:
+        cursor = self.c.execute(f"SELECT BV,JSON  from BV2JSON WHERE BV = '{bv}'")
+        for row in cursor:
+            return row[1]
+        return "not found"
+    
+    def getRandomCookie(self)->str:
+        cookie_list = []
+        cursor = self.c.execute("SELECT COOKIE  from COOKIES")
+        for row in cursor:
+            cookie_list.append(row[0])
+        return cookie_list[randint(0,len(cookie_list)-1)]
+    
+dbOperation = DB_Operation()
+
+# 匹配需要被删除的字符串
+def strFilter(s:str)->bool:
+    if s == '':
+        return True
+    # 单字重复多次
+    if s.replace(s[0],'') == '':
+        return True
+    return s in stop_words#  or "哈" in s
+             
 
 @app.route("/logo.png")
 async def plugin_logo():
@@ -50,22 +105,49 @@ async def openapi_spec():
         text = f.read()
         return text, 200, {"Content-Type": "text/yaml"}
     
-import os
 comment_path = 'bilibili1.csv'
 if os.path.exists(comment_path):
     os.remove(comment_path)
 
+# 进行情感分析
 @app.route('/test',methods=['POST'])
 async def test():
     app.logger.debug('Headers: %s', request.headers)
     app.logger.debug('Body: %s', request.data)
     bilibili_url=request.json.get('url', "")
-    bv_id=bilibili_url
-    cid=get_cid(bv_id)
-    str_list=spider(cid)
+    bv_id = bilibili_url
+    # bv_id = re.search(r'(BV.*?).{10}', bilibili_url)
+
+    str_list = []
+
+    dbo = DB_Operation()
+    db_output = dbo.select(bv_id)
+    # 重复请求场景
+    if db_output == "not found":
+        # 优化并发请求场景，防止并发下文件io异常
+        c1 = cbd()
+        # 随机获取cookie,也方便运维及时更新cookie库
+        c1.cookie = dbo.getRandomCookie()
+        c1.stopwords = stop_words
+        str_list = list(Counter(c1.search_dm_from_bv(bilibili_url)).items())
+        index = 0
+        
+        while index < len(str_list):
+            s = str_list[index][0]
+            if strFilter(s):
+                str_list.pop(index)
+            else:
+                index += 1
+        str_list = str_list[:min(len(str_list),50)]
+        str_list.sort(key = lambda x :  x[1])
+        DB_Operation().insert(bv_id,json.dumps(str_list))
+    else:
+        str_list = json.loads(db_output)
+
+
     message="成功"
-    prompt = "理解弹幕前二十(str_list)的内容，并对内容进行总结概括,以及情感分析"
-    return make_json_response({"message":message,"str_list":data_visual(),"prompt":prompt})
+    prompt = "理解弹幕(str_list)的内容，其中弹幕文字后面对应的数字是弹幕出现的次数，并对内容进行总结概括与情感分析，情感分析不少于100字，不要列举内容"
+    return make_json_response({"message":message,"str_list":str_list,"prompt":prompt})
 
 @app.route('/test2',methods=['POST'])
 async def test2():
@@ -141,17 +223,11 @@ def get_cid(BV):
     return cid
 
 def chinese_word_cut(mytext):
-    with open('stopwords.txt', encoding='utf-8') as f:  # 可根据需要打开停用词库，然后加上不想显示的词语
-        con = f.readlines()
-        stop_words = set()
-        for i in con:
-            i = i.replace("\n", "")  # 去掉读取每一行数据的\n
-            stop_words.add(i)
     # 文本预处理 ：去除一些无用的字符只提取出中文出来
     new_data = re.findall('[\u4e00-\u9fa5]+', mytext, re.S)
     filtered_data = [word for word in new_data if word not in stop_words and "哈" not in word]
     wordcount = Counter(filtered_data).most_common(20)
-    print("词频前二十的词语为：",wordcount)
+    print("弹幕数量前二十为：",wordcount)
     return wordcount
 
 def data_visual():
@@ -162,7 +238,7 @@ def data_visual():
 
 @app.route('/')
 def index():
-    return 'welcome to my webpage!'
+    return '你是温柔坚强的人吗?'
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=8081)

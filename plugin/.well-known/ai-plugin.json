@@ -1,7 +1,7 @@
 {
     "schema_version": "v1",
-    "name_for_human": "b站弹幕评论分析",
-    "name_for_model": "bilibili_analysis",
+    "name_for_human": "b站弹幕评论分析_demo",
+    "name_for_model": "bilibili_analysis_demo",
     "description_for_human": "帮助用户分析b站弹幕评论，可以分析弹幕评论的情感倾向、词频、词云、关键词、热度等",
     "description_for_model": "帮助用户来分析b站弹幕评论，可以分析弹幕评论的情感倾向、词频、词云、关键词、热度等",
     "auth": {
