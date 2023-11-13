@@ -7,6 +7,8 @@ from collections import Counter
 from flask import Flask, request, send_file, make_response
 from flask_cors import CORS
 from getdm import Crawler_Bilibili_Danmu as cbd
+# from createDB import DB_Operation
+from time import time
 import json
 import random
 import requests
@@ -44,14 +46,16 @@ class DB_Operation:
         self.c = self.conn.cursor()
 
     def insert(self,bv,json) ->None:
-        sql_str = f"INSERT INTO BV2JSON (BV,JSON) \
-            VALUES ('{bv}','{json}')"
+        sql_str = f"INSERT INTO BV2JSON (BV,JSON,DATE) \
+            VALUES ('{bv}','{json}',{int(time())})"
         self.c.execute(sql_str)
         self.conn.commit()
 
     def select(self,bv) ->str:
-        cursor = self.c.execute(f"SELECT BV,JSON  from BV2JSON WHERE BV = '{bv}'")
+        cursor = self.c.execute(f"SELECT BV,JSON,DATE from BV2JSON WHERE BV = '{bv}'")
         for row in cursor:
+            if int(row[2]) < int(time())-3600*24:
+                continue
             return row[1]
         return "not found"
     
@@ -109,17 +113,16 @@ comment_path = 'bilibili1.csv'
 if os.path.exists(comment_path):
     os.remove(comment_path)
 
-# 进行情感分析
+# 进行弹幕分析
 @app.route('/test',methods=['POST'])
 async def test():
     app.logger.debug('Headers: %s', request.headers)
     app.logger.debug('Body: %s', request.data)
     bilibili_url=request.json.get('url', "")
-    bv_id = bilibili_url
+    bv_id = re.compile('BV\w{10}').search(bilibili_url)[0]
+    print(bv_id)
     # bv_id = re.search(r'(BV.*?).{10}', bilibili_url)
-
     str_list = []
-
     dbo = DB_Operation()
     db_output = dbo.select(bv_id)
     # 重复请求场景
@@ -130,6 +133,7 @@ async def test():
         c1.cookie = dbo.getRandomCookie()
         c1.stopwords = stop_words
         str_list = list(Counter(c1.search_dm_from_bv(bilibili_url)).items())
+        # print(str_list)
         index = 0
         
         while index < len(str_list):
@@ -139,11 +143,10 @@ async def test():
             else:
                 index += 1
         str_list = str_list[:min(len(str_list),50)]
-        str_list.sort(key = lambda x :  x[1])
+        str_list.sort(key = lambda x :  x[1],reverse=True)
         DB_Operation().insert(bv_id,json.dumps(str_list))
     else:
         str_list = json.loads(db_output)
-
 
     message="成功"
     prompt = "理解弹幕(str_list)的内容，其中弹幕文字后面对应的数字是弹幕出现的次数，并对内容进行总结概括与情感分析，情感分析不少于100字，不要列举内容"

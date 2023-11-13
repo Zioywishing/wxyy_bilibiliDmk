@@ -12,6 +12,33 @@ from re import match
 import pandas as pd
 import time
 import logging
+import sqlite3
+db_path = './database.db'
+from random import randint
+
+class DB_Operation:
+    def __init__(self) -> None:
+        self.conn = sqlite3.connect(db_path)
+        self.c = self.conn.cursor()
+
+    def insert(self,bv,json) ->None:
+        sql_str = f"INSERT INTO BV2JSON (BV,JSON) \
+            VALUES ('{bv}','{json}')"
+        self.c.execute(sql_str)
+        self.conn.commit()
+
+    def select(self,bv) ->str:
+        cursor = self.c.execute(f"SELECT BV,JSON  from BV2JSON WHERE BV = '{bv}'")
+        for row in cursor:
+            return row[1]
+        return "not found"
+    
+    def getRandomCookie(self)->str:
+        cookie_list = []
+        cursor = self.c.execute("SELECT COOKIE  from COOKIES")
+        for row in cursor:
+            cookie_list.append(row[0])
+        return cookie_list[randint(0,len(cookie_list)-1)]
 
 
 
@@ -303,6 +330,7 @@ class Crawler_Bilibili_Danmu:
     # 输入bv号,最大爬取视频数量（可选，默认为1）,返回视频的所有弹幕，list类型。
     def search_dm_from_bv(self, bvid) -> list:
         try:
+            bvid = re.compile('BV\w{10}').search(bvid)[0]
             lock = Lock()
             t = Thread(target=self.thread_dms_add_from_bv,
                                args=(bvid, lock))
@@ -391,20 +419,22 @@ class Crawler_Bilibili_Danmu:
 # 使用
 if __name__ == '__main__':
     c = Crawler_Bilibili_Danmu()
+    
+    c.cookie = DB_Operation().getRandomCookie()
 
-    # 通过keyword查询
+    # # 通过keyword查询
 
-    print('------------------------------------------------------')
-    keyword = '黑色柳丁'
-    c.search_dm(keyword, 3)
-    print(c.getRank())
+    # print('------------------------------------------------------')
+    # keyword = '黑色柳丁'
+    # c.search_dm(keyword, 3)
+    # print(c.getRank())
 
     
     c.reinit()
 
     # 通过bv号查询
     print('------------------------------------------------------')
-    bv = 'BV1kr4y1F73U'
+    bv = 'https://www.bilibili.com/video/BV11N4y1S7MN/?spm_id_from=333.1007.tianma.1-3-3.click'
     c.search_dm_from_bv(bv)
     print(c.getRank())
 

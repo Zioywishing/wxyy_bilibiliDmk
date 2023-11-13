@@ -18,7 +18,7 @@ paths:
                             $ref: "#/components/schemas/test"
             responses:
                 "200":
-                    description: 成功接收到bv号,并返回弹幕前二十的主要思想以及概括
+                    description: 成功接收到bv号,总结分析弹幕前五十的主要情感趋势以及概括
                     content:
                         application/json:
                             schema:
