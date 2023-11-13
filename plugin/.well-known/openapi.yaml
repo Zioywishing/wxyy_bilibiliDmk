@@ -1,15 +1,15 @@
 openapi: 3.0.1
 info:
     title: bilibili弹幕分析
-    description: 本项目是一个基于bilibili弹幕的分析项目，通过对弹幕的分析，可以得到弹幕中的关键词，以及弹幕的分析结果。
+    description: 本项目是一个基于bilibili弹幕和评论的分析项目，通过对弹幕的分析，可以得到弹幕中的关键词，以及弹幕的分析结果。
     version: "v1"
 servers:
     - url: http://127.0.0.1:8081
 paths:
-   /test:
+    /test:
         post:
             operationId: test
-            summary: 测试能否接受bilibili_url链接
+            summary: 传入bilibili的BV链接,并对弹幕进行情感分析
             requestBody:
                 required: true
                 content:
@@ -18,11 +18,28 @@ paths:
                             $ref: "#/components/schemas/test"
             responses:
                 "200":
-                    description: bilibili_url链接接受成功
+                    description: 成功接收到bv号,并返回弹幕前二十的主要思想以及概括
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/messageResponse"
+                                $ref: "#/components/schemas/wordResponse"
+    /test2:
+        post:
+            operationId: test2
+            summary: 传入bilibili的BV链接,并对第一页的热评进行总结归纳
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/test"
+            responses:
+                "200":
+                    description: 返回当前评论主要在讨论的事情
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/commentResponse"
 
 components:
     schemas:
@@ -40,3 +57,21 @@ components:
                 url:
                     type: String
                     description: bilibili_url链接
+        wordResponse:
+            type: object
+            required: [str_list]
+            properties:
+                str_list:
+                    type: array
+                    items:
+                        type: string
+                        description: 弹幕
+        commentResponse:
+            type: object
+            required: [str_list]
+            properties:
+                str_list:
+                    type: array
+                    items:
+                        type: string
+                        description: 评论
