@@ -165,6 +165,8 @@ def getDmk(bv_id):
         DB_Operation().insert_dmk(bv_id,json.dumps(str_list))
     else:
         str_list = json.loads(db_output)
+
+    print(str_list)
     return str_list
 
 # 根据bv号获取评论
@@ -183,6 +185,7 @@ def get_comment(bv_id):
         DB_Operation().insert_comment(bv_id,json.dumps(comment_list))
     else:
         comment_list = json.loads(db_output)
+    print(comment_list)
     return comment_list
 
 
@@ -204,7 +207,7 @@ async def analyseComment():
     app.logger.debug('Headers: %s', request.headers)
     app.logger.debug('Body: %s', request.data)
     bilibili_url=request.json.get('url', "")
-    bv_id=bilibili_url
+    bv_id=re.compile('BV\w{10}').search(bilibili_url)[0]
     comment_list=get_comment(bv_id)
     message="成功"
     prompt = "根据评论(str_list)的主要内容，对内容进行总结概括，分析评论者的情感趋势，给出评论用户群体画像，不少于200字"
@@ -226,7 +229,6 @@ async def analyseBoth():
 
 def extract_comments(data):
     comments_list = []
-
     def traverse(json_data):
         if isinstance(json_data, dict):
             for key, value in json_data.items():

@@ -1,3 +1,7 @@
+"""
+@Auth ： miaoSpring
+"""
+
 import urllib.parse
 import urllib.request
 import json
@@ -78,8 +82,8 @@ class Crawler_Bilibili_Danmu:
         # if output_exist_flag == False:
         #     os.mkdir('./output')
 
-        # cookie请自己赋值
-        self.cookie = ''
+        # 经测试这样拙劣地伪造bvid也能蒙混过关
+        self.cookie = f"buvid4=6C40FAB6-DD4B-D13E-2ED3-D2988C47FDD95525-{randint(100000000,999999999)}-Mk4wjKcJQ44UySkPeadjNaViaWnL%2FhUZPB5NFYnHROqblf8acPNd%2FQ%3D%3D; buvid3=58D32130-{randint(1000,9999)}-40D5-A333-5D0B6520E02F36753infoc"
 
 
     # 重新初始化对象
@@ -108,7 +112,7 @@ class Crawler_Bilibili_Danmu:
         try:
             if page >= 25:
                 return
-            url = 'https://api.bilibili.com/x/web-interface/wbi/search/type?&page_size=42&search_type=video&keyword=' + \
+            url = 'https://api.bilibili.com/x/web-interface/search/type?search_type=video&keyword=' + \
                 str(keyword) + '&page='+str(page) + '&order=' + order
             print(url)
             headers = {
@@ -117,6 +121,7 @@ class Crawler_Bilibili_Danmu:
             }
             headers['cookie'] = self.cookie
             data = requests.get(url=url, headers=headers).text
+            # print(json.loads(data))
             BVs = re.findall('BV..........', data)
             lock.acquire()
             try:
@@ -395,7 +400,7 @@ class Crawler_Bilibili_Danmu:
         # plt.axis("off")  # 不显示坐标轴
         # plt.show()  # 显示图片
 
-    def getRank(self) -> map:
+    def jiebaRank(self) -> map:
         dms = self.dms[:]
         word_count = {}
         # len_dms = len(dms)
@@ -419,15 +424,14 @@ class Crawler_Bilibili_Danmu:
 # 使用
 if __name__ == '__main__':
     c = Crawler_Bilibili_Danmu()
-    
-    # c.cookie = DB_Operation().getRandomCookie()
 
-    # # 通过keyword查询
+    # 通过keyword查询
 
-    # print('------------------------------------------------------')
-    # keyword = '黑色柳丁'
-    # c.search_dm(keyword, 3)
-    # print(c.getRank())
+    print('------------------------------------------------------')
+    keyword = '黑色柳丁'
+    res = c.search_dm(keyword, 3)
+    print(res)
+    print(c.jiebaRank())
 
     
     c.reinit()
@@ -435,6 +439,7 @@ if __name__ == '__main__':
     # 通过bv号查询
     print('------------------------------------------------------')
     bv = 'https://www.bilibili.com/video/BV11N4y1S7MN/?spm_id_from=333.1007.tianma.1-3-3.click'
-    c.search_dm_from_bv(bv)
-    print(c.getRank())
+    res = c.search_dm_from_bv(bv)
+    print(res)
+    print(c.jiebaRank())
 
