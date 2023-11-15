@@ -420,7 +420,7 @@ class Crawler_Bilibili_Danmu:
 if __name__ == '__main__':
     c = Crawler_Bilibili_Danmu()
     
-    c.cookie = DB_Operation().getRandomCookie()
+    # c.cookie = DB_Operation().getRandomCookie()
 
     # # 通过keyword查询
 

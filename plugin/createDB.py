@@ -38,18 +38,24 @@ class DB_Operation:
 
 if __name__ == "__main__":
     db_path = './database.db'
-    # conn = sqlite3.connect(db_path)
-    # c = conn.cursor()
-    # c.execute('''CREATE TABLE BV2JSON
-    #     (BV TEXT,
-    #         JSON TEXT,
-    #         DATE INT );''')
-    # conn.commit()
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE BV2DMKJSON
+        (BV TEXT,
+            JSON TEXT,
+            DATE INT );''')
+    conn.commit()
+
+    c.execute('''CREATE TABLE BV2COMMENTJSON
+        (BV TEXT,
+            JSON TEXT,
+            DATE INT );''')
+    conn.commit()
 
     # c.execute('''CREATE TABLE COOKIES
     #     (COOKIE TEXT );''')
     # conn.commit()
 
     # DB_Operation().insert('12321','12322')
-    s = DB_Operation().select("12321")
-    print(s)
+    # s = DB_Operation().select("12321")
+    # print(s)

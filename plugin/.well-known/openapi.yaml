@@ -6,16 +6,16 @@ info:
 servers:
     - url: http://127.0.0.1:8081
 paths:
-    /test:
+    /analyseDMK:
         post:
-            operationId: test
-            summary: 传入bilibili的BV链接,并对弹幕进行情感分析
+            operationId: analyseDMK
+            summary: 传入bilibili的BV号或BV链接,并对其中的弹幕（不是评论）进行多方位分析
             requestBody:
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/test"
+                            $ref: "#/components/schemas/analyseDMK_input"
             responses:
                 "200":
                     description: 成功接收到bv号,总结分析弹幕前五十的主要情感趋势以及概括
@@ -23,23 +23,40 @@ paths:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/wordResponse"
-    /test2:
+    /analyseComment:
         post:
-            operationId: test2
-            summary: 传入bilibili的BV链接,并对第一页的热评进行总结归纳
+            operationId: analyseComment
+            summary: 传入bilibili的BV号或BV链接,并对其中的评论（不是弹幕）进行多方位分析
             requestBody:
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/test"
+                            $ref: "#/components/schemas/analyseComment_input"
             responses:
                 "200":
-                    description: 返回当前评论主要在讨论的事情
+                    description: 返回对其中的评论（不是弹幕）进行的多方位分析
                     content:
                         application/json:
                             schema:
                                 $ref: "#/components/schemas/commentResponse"
+    /analyseBoth:
+        post:
+            operationId: analyseBoth
+            summary: 传入bilibili的BV号或BV链接,并对其中的评论和弹幕进行多方位分析
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/analyseBoth_input"
+            responses:
+                "200":
+                    description: 返回对其中的评论和弹幕进行的多方位分析
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/bothResponse"
 
 components:
     schemas:
@@ -50,13 +67,27 @@ components:
                 message:
                     type: string
                     description: 回复信息
-        test:
+        analyseDMK_input:
             type: object
             required: [url]
             properties:
                 url:
                     type: String
-                    description: bilibili_url链接
+                    description: BV号或者bilibili_url链接
+        analyseComment_input:
+            type: object
+            required: [url]
+            properties:
+                url:
+                    type: String
+                    description: BV号或者bilibili_url链接
+        analyseBoth_input:
+            type: object
+            required: [url]
+            properties:
+                url:
+                    type: String
+                    description: BV号或者bilibili_url链接
         wordResponse:
             type: object
             required: [str_list]
@@ -65,7 +96,7 @@ components:
                     type: array
                     items:
                         type: string
-                        description: 弹幕
+                        description: 弹幕内容
         commentResponse:
             type: object
             required: [str_list]
@@ -74,4 +105,13 @@ components:
                     type: array
                     items:
                         type: string
-                        description: 评论
+                        description: 评论内容
+        bothResponse:
+            type: object
+            required: [str_list]
+            properties:
+                both_list:
+                    type: array
+                    items:
+                        type: string
+                        description: 评论内容
