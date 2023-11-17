@@ -10,41 +10,11 @@ from bs4 import BeautifulSoup as bs
 import requests
 import re
 import jieba
-import wordcloud
-import os
 from re import match
 import pandas as pd
 import time
 import logging
-import sqlite3
-db_path = './database.db'
 from random import randint
-
-class DB_Operation:
-    def __init__(self) -> None:
-        self.conn = sqlite3.connect(db_path)
-        self.c = self.conn.cursor()
-
-    def insert(self,bv,json) ->None:
-        sql_str = f"INSERT INTO BV2JSON (BV,JSON) \
-            VALUES ('{bv}','{json}')"
-        self.c.execute(sql_str)
-        self.conn.commit()
-
-    def select(self,bv) ->str:
-        cursor = self.c.execute(f"SELECT BV,JSON  from BV2JSON WHERE BV = '{bv}'")
-        for row in cursor:
-            return row[1]
-        return "not found"
-    
-    def getRandomCookie(self)->str:
-        cookie_list = []
-        cursor = self.c.execute("SELECT COOKIE  from COOKIES")
-        for row in cursor:
-            cookie_list.append(row[0])
-        return cookie_list[randint(0,len(cookie_list)-1)]
-
-
 
 
 class Crawler_Bilibili_Danmu:
@@ -331,6 +301,36 @@ class Crawler_Bilibili_Danmu:
         except Exception as e:
             print(e)
             return []
+        
+    # 输入关键词keyword,最大爬取视频数量（可选，默认为1）,返回根据搜索结果而爬取的至多max_size个视频的BV号，list类型。
+    def search_bvs(self, keyword, max_size=1) -> list:
+        try:
+            self.keyword = keyword
+            bvs = set()
+            lock = Lock()
+            threads = set()
+
+            # 获取bv号，当需要的bv号超过1000个时，尝试使用其他搜索order来获取更多bv号
+            for ord in ['default', 'ranklevel', 'click', 'scores', 'damku', 'stow', 'pubdate', 'senddate', 'id']:
+
+            # 获取bv号，作业需求修正
+            # for ord in ['default']:
+                for num in range(min(int(max_size/40)+1, 25)):
+                    t = Thread(target=self.thread_get_bvs,
+                               args=(keyword, num+1, ord, lock))
+                    t.start()
+                    threads.add(t)
+                while len(threads) > 0:
+                    threads.pop().join()
+                if len(set(self.bvs)) >= max_size:
+                    break
+
+            # 显示进度用
+            self.size = len(set(self.bvs))
+            return self.bvs
+        except Exception as e:
+            print(e)
+            return []
     
     # 输入bv号,最大爬取视频数量（可选，默认为1）,返回视频的所有弹幕，list类型。
     def search_dm_from_bv(self, bvid) -> list:
@@ -442,4 +442,3 @@ if __name__ == '__main__':
     res = c.search_dm_from_bv(bv)
     print(res)
     print(c.jiebaRank())
-

@@ -6,6 +6,23 @@ info:
 servers:
     - url: http://127.0.0.1:8081
 paths:
+    /analyseKeyword:
+        post:
+            operationId: analyseKeyword
+            summary: 传入一个关键词（keyword）,在哔哩哔哩搜索相关内容并对其中的评论和弹幕进行多方位分析
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/analyseKeyword_input"
+            responses:
+                "200":
+                    description: 返回对其中的评论和弹幕进行的多方位分析
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/bothResponse"
     /analyseDMK:
         post:
             operationId: analyseDMK
@@ -58,6 +75,64 @@ paths:
                             schema:
                                 $ref: "#/components/schemas/bothResponse"
 
+
+    # 获取视频封面
+    /coverGet:
+        post:
+            operationId: coverGet
+            summary: 传入bilibili的BV号或BV链接,并获取其视频封面
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/coverGet_input"
+            responses:
+                "200":
+                    description: 返回视频封面的链接
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/coverResponse"
+
+    # 获取热点词
+    /analysehot:
+        post:
+            operationId: analysehot
+            summary: 传入bilibili的BV号或BV链接,并对其中的评论和弹幕进行热门词分析
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/analysehot_input"
+            responses:
+                "200":
+                    description: 返回对其中的评论和弹幕进行的热门词分析
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/hotResponse"
+
+    # 得到弹幕排行
+    /analysePaihang:
+        post:
+            operationId: analysePaihang
+            summary: 传入bilibili的BV号或BV链接,并对其中的弹幕进行排行
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/analysePaihang_input"
+            responses:
+                "200":
+                    description: 成功接收到bv号,排行前五的弹幕并进行展示
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/paihangResponse"
+
 components:
     schemas:
         messageResponse:
@@ -67,6 +142,13 @@ components:
                 message:
                     type: string
                     description: 回复信息
+        analyseKeyword_input:
+            type: object
+            required: [keyword]
+            properties:
+                keyword:
+                    type: String
+                    description: 用于搜索的关键字
         analyseDMK_input:
             type: object
             required: [url]
@@ -88,6 +170,7 @@ components:
                 url:
                     type: String
                     description: BV号或者bilibili_url链接
+        
         wordResponse:
             type: object
             required: [str_list]
@@ -110,8 +193,65 @@ components:
             type: object
             required: [str_list]
             properties:
+                dm_list:
+                    type: array
+                    items:
+                        type: string
+                        description: 弹幕内容
+                comment_list:
+                    type: array
+                    items:
+                        type: string
+                        description: 评论内容
+
+        # 获取视频封面
+        coverGet_input:
+            type: object
+            required: [url]
+            properties:
+                url:
+                    type: String
+                    description: BV号或者bilibili_url链接
+        coverResponse:
+            type: object
+            required: [imageurl]
+            properties:
+                result:
+                    type: String
+                    description: 封面链接
+
+        # 分析热门词
+        analysehot_input:
+            type: object
+            required: [url]
+            properties:
+                url:
+                    type: String
+                    description: BV号或者bilibili_url链接
+        hotResponse:
+            type: object
+            required: [str_list]
+            properties:
                 both_list:
                     type: array
                     items:
                         type: string
                         description: 评论内容
+
+        analysePaihang_input:
+            type: object
+            required: [ url ]
+            properties:
+                url:
+                    type: String
+                    description: BV号或者bilibili_url链接
+
+        paihangResponse:
+            type: object
+            required: [ str_list ]
+            properties:
+                str_list:
+                    type: array
+                    items:
+                        type: string
+                        description: 弹幕排行

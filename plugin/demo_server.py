@@ -16,6 +16,7 @@ import re
 import sqlite3
 import os
 from random import randint
+from threading import Thread
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "https://yiyan.baidu.com"}})
@@ -182,12 +183,65 @@ def get_comment(bv_id):
         # 选取内容最长的前20条评论
         comment_list.sort(key = lambda x : len(x),reverse=True)
         comment_list = comment_list[:20]
+        comment_list = [s[:50] for s in comment_list]  
         DB_Operation().insert_comment(bv_id,json.dumps(comment_list))
     else:
         comment_list = json.loads(db_output)
     print(comment_list)
     return comment_list
 
+# 提取链接中的BV号
+def url2bv(url):
+    # 提取分享短链中的bv号
+    if(url[:15] == "https://b23.tv/"):
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/84.0.4147.89 Safari/537.36",
+        }
+        data = requests.get(url=url,headers=headers).text[3000:4500]
+        data =re.compile('BV\w{10}').search(data)[0]
+        return data
+    return re.compile('BV\w{10}').search(url)[0]
+
+# 获取视频封面相关
+def get_cover(bv_id):
+    url = f'https://api.bilibili.com/x/web-interface/view?bvid={bv_id}'
+    res = requests.get(url)
+    data = json.loads(res.text)
+    imageurl = data['data']['pic']
+    return imageurl
+
+
+
+# 根据关键词进行评论和弹幕分析
+@app.route('/analyseKeyword',methods=['POST'])
+async def analyseKeyword():
+    app.logger.debug('Headers: %s', request.headers)
+    app.logger.debug('Body: %s', request.data)
+    keyword=request.json.get('keyword', "")
+    bvidList = cbd().search_bvs(keyword,max_size=5)
+    comment_list = []
+    dmk_list = []
+    threadPool = []
+    def t_(bv,c,d):
+        c+=get_comment(bv)
+        d+=getDmk(bv)
+
+    for bv_id in bvidList:
+        t = Thread(target=t_,args=[bv_id,comment_list,dmk_list])
+        t.start()
+        threadPool.append(t)
+    for t in threadPool:
+        t.join()
+
+    random.shuffle(comment_list)
+    random.shuffle(dmk_list)
+    comment_list = comment_list[:20]
+    dmk_list = dmk_list[:20]
+    dmk_list.sort(key = lambda x :  x[1],reverse=True)
+    message="成功"
+    prompt = "根据弹幕(dmk_list)与评论(comment_list)的主要内容，对内容进行总结概括，分析评论者的情感趋势，给出评论用户群体画像，不少于400字"
+    return make_json_response({"message":message,"dm_list":dmk_list,"comment_list":comment_list,"prompt":prompt})
 
 # 进行弹幕分析
 @app.route('/analyseDMK',methods=['POST'])
@@ -195,7 +249,7 @@ async def analyseDMK():
     app.logger.debug('Headers: %s', request.headers)
     app.logger.debug('Body: %s', request.data)
     bilibili_url=request.json.get('url', "")
-    bv_id = re.compile('BV\w{10}').search(bilibili_url)[0]
+    bv_id = url2bv(bilibili_url)
     str_list = getDmk(bv_id)
     message="成功"
     prompt = "理解弹幕(str_list)的内容，其中弹幕文字后面对应的数字是弹幕出现的次数，并对内容进行总结概括与情感分析，情感分析不少于200字，不要列举内容"
@@ -207,7 +261,7 @@ async def analyseComment():
     app.logger.debug('Headers: %s', request.headers)
     app.logger.debug('Body: %s', request.data)
     bilibili_url=request.json.get('url', "")
-    bv_id=re.compile('BV\w{10}').search(bilibili_url)[0]
+    bv_id=url2bv(bilibili_url)
     comment_list=get_comment(bv_id)
     message="成功"
     prompt = "根据评论(str_list)的主要内容，对内容进行总结概括，分析评论者的情感趋势，给出评论用户群体画像，不少于200字"
@@ -219,12 +273,51 @@ async def analyseBoth():
     app.logger.debug('Headers: %s', request.headers)
     app.logger.debug('Body: %s', request.data)
     bilibili_url=request.json.get('url', "")
-    bv_id = re.compile('BV\w{10}').search(bilibili_url)[0]
+    bv_id = url2bv(bilibili_url)
     comment_list=get_comment(bv_id)
     dmk_list = getDmk(bv_id)
     message="成功"
     prompt = "根据弹幕(dmk_list)与评论(comment_list)的主要内容，对内容进行总结概括，分析评论者的情感趋势，给出评论用户群体画像，不少于400字"
+    return make_json_response({"message":message,"dm_list":dmk_list,"comment_list":comment_list,"prompt":prompt})
+
+
+# 获取视频封面
+@app.route('/coverGet',methods=['POST'])
+def get_cover_():
+    app.logger.debug('Headers: %s', request.headers)
+    app.logger.debug('Body: %s', request.data)
+    bilibili_url=request.json.get('url', "")
+    bv_id = url2bv(bilibili_url)
+    coverurl = get_cover(bv_id)
+    message="成功"
+    prompt = "获取链接后将链接输出给使用者并告诉使用者这是头像的链接"
+    return make_json_response({"message":message,"str_list":coverurl,"prompt":prompt})
+
+# 提取热门词频并分析                ...........
+@app.route('/analysehot',methods=['POST'])
+async def analysehot():
+    app.logger.debug('Headers: %s', request.headers)
+    app.logger.debug('Body: %s', request.data)
+    bilibili_url=request.json.get('url', "")
+    bv_id = url2bv(bilibili_url)
+    comment_list=get_comment(bv_id)
+    dmk_list = getDmk(bv_id)
+    message="成功"
+    prompt = "对弹幕(dmk_list)与评论(comment_list)进行分析,提取其中的出现频率高的词，分析得出关注点，不少于300字"
     return make_json_response({"message":message,"both_list":comment_list+dmk_list,"prompt":prompt})
+
+# 进行弹幕排行
+@app.route('/analysePaihang', methods=['POST'])
+async def analysePaihang():
+    app.logger.debug('Headers: %s', request.headers)
+    app.logger.debug('Body: %s', request.data)
+    bilibili_url = request.json.get('url', "")
+    bv_id = url2bv(bilibili_url)
+    str_list = getDmk(bv_id)
+    message = "成功"
+    prompt = "对弹幕(str_list)的内容进行分析，其中弹幕文字后面对应的数字是弹幕出现的次数，给出弹幕出现次数最多的前十条弹幕并以直观的方式展现"
+    return make_json_response({"message": message, "str_list": str_list, "prompt": prompt})
+
 
 
 def extract_comments(data):
@@ -297,5 +390,12 @@ def extract_comments(data):
 def index():
     return '你是温柔坚强的人吗?'
 
+def runHttp():
+    app.run(debug=True, host='0.0.0.0', port=8081)
+
+def runHttps():
+    ssl_context=('miaospring.top_bundle.pem', 'miaospring.top.key')
+    app.run(debug=True, host='0.0.0.0', port=8081, ssl_context=ssl_context)
+
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=8081)
+    runHttp()

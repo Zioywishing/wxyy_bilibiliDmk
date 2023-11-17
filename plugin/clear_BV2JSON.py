@@ -7,5 +7,6 @@ db_path = './database.db'
 
 conn = sqlite3.connect(db_path)
 c = conn.cursor()
-c.execute('''DELETE FROM BV2JSON''')
+c.execute('''DELETE FROM BV2DMKJSON''')
+c.execute('''DELETE FROM BV2COMMENTJSON''')
 conn.commit()
