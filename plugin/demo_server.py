@@ -136,6 +136,13 @@ async def openapi_spec():
         text = f.read()
         return text, 200, {"Content-Type": "text/yaml"}
     
+
+@app.route("/.well-known/example.yaml")
+async def example_spec():
+    with open(".well-known/example.yaml", encoding="utf-8") as f:
+        text = f.read()
+        return text, 200, {"Content-Type": "text/yaml"}
+    
 comment_path = 'bilibili1.csv'
 if os.path.exists(comment_path):
     os.remove(comment_path)

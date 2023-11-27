@@ -13,5 +13,8 @@
     },
     "logo_url": "http://127.0.0.1:8081/logo.png",
     "contact_email": "zjh3628@qq.com",
-    "legal_info_url": "http://www.example.com/legal"
+    "legal_info_url": "http://www.example.com/legal",
+    "examples": {
+        "url": "http://127.0.0.1:8081/.well-known/example.yaml" 
+    }
 }
